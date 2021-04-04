@@ -7,7 +7,7 @@ license = "MIT"
 license-file = "LICENSE"
 description = "glTF 2.0 loader for three-d"
 readme = "README.MD"
-keywords = ["glTF", "3D", "asset", "model", "scene", "three-d"]
+keywords = ["glTF", "3D", "asset", "model", "three-d"]
 include = ["**/*.rs", "Cargo.toml"]
 repository = "https://github.com/kije/three-d-gltf-import"
 [dependencies]
