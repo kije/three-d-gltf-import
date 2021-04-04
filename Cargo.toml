@@ -1,0 +1,41 @@
+[package]
+name = "three-d-gltf-import"
+version = "0.1.0"
+authors = ["Kim Jeker <git@kije.ch>"]
+edition = "2018"
+license = "MIT"
+description = "glTF 2.0 loader for three-d"
+readme = "README.MD"
+keywords = ["glTF", "3D", "asset", "model", "scene", "three-d"]
+include = ["**/*.rs", "Cargo.toml"]
+
+[dependencies]
+base64 = "0.11.0"
+
+[dependencies.image]
+version = "^0.23.14"
+default-features = false
+features = ["jpeg", "png"]
+
+[dependencies.three-d]
+version = "^0.6.1"
+default-features = false
+features = ["image-io"]
+
+[dependencies.gltf]
+version = "0.15"
+default-features = false
+features = ["names", "KHR_materials_pbrSpecularGlossiness", "import"]
+
+[dev-dependencies]
+wasm-bindgen-test = "^0.3.13"
+
+[target."cfg(target_arch = \"wasm32\")".dev-dependencies.js-sys]
+version = "0.3"
+
+[target."cfg(target_arch = \"wasm32\")".dev-dependencies.wasm-bindgen]
+version = "0.2"
+features = ["serde-serialize"]
+
+[target."cfg(target_arch = \"wasm32\")".dev-dependencies.wasm-bindgen-futures]
+version = "0.4"
