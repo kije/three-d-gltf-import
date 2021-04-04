@@ -5,6 +5,8 @@ It supports loading `.gltf` as well as `.glb` (binary) files, and can handle emb
 
 Internally ist ueses the [`gltf`](https://crates.io/crates/gltf) crate to parse the GLTF files.
 
+## THIS CRATE IS STILL UNDER DEVELOPMENT
+
 ## Usage
 TODO
 
