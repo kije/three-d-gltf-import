@@ -11,12 +11,37 @@ use three_d::Loader;
 #[cfg(not(target_arch = "wasm32"))]
 use three_d::IOError;
 
+/// Importer for GLTF models
+///
+/// This imported will, given a parsed GLTF document, load linked assets like images (for textures) and buffers.
+/// Example usage:
+/// ```rust
+/// use gltf::Gltf;
+/// use std::path::PathBuf;
+/// use three_d_gltf_import::import::GltfImporter;
+///
+/// let base = PathBuf::from("./sample_models/2.0/ToyCar/glTF");
+/// let gltf = Gltf::open(base.join("ToyCar.gltf")).unwrap();
+/// GltfImporter::import(gltf, Some(base), |imported| {
+///     let result = imported.unwrap();
+///     assert_eq!(result.buffers.len(), 1);
+///     assert_eq!(result.images.len(), 8);
+/// })
+/// ```
 pub struct GltfImporter {}
 
+/// Imported GLTF model
 #[derive(Clone, Debug)]
 pub struct ImportedGltfModel {
+    /// Imported image data
+    ///
+    /// Keys of the hashmap corresponds to the indexes from the `images` section of the GLTF document
     pub images: HashMap<usize, gltf_image::Data>,
+    /// Imported buffer data
+    ///
+    /// Keys of the hashmap corresponds to the indexes from the `buffers` section of the GLTF document
     pub buffers: HashMap<usize, buffer::Data>,
+    /// The parsed GLTF document
     pub document: Document,
 }
 
@@ -46,6 +71,22 @@ enum BufferImport {
 }
 
 impl GltfImporter {
+    /// Imports a provided gltf document
+    ///
+    /// If any relative, external references to buffers or images exist in the document, `base` needs to be provided
+    /// with the base path (i.e. the path that file paths in the document are relative to)
+    ///
+    /// The importing happens asynchronously since it may need to download external files etc...
+    /// Thus a `on_done` callback will be called with the imported document, or an error in case the document couldnt be imported
+    ///
+    /// Async handling thus is similar to [`three-d`'s Loader](https://docs.rs/three-d/latest/three_d/io/struct.Loader.html#method.load)
+    ///
+    /// ```rust
+    /// use three_d_gltf_import::import::GltfImporter;
+    /// GltfImporter::import(gltf, Some(base), |imported| {
+    ///     // process imported document
+    /// })
+    /// ```
     pub fn import<F>(Gltf { document, blob }: Gltf, base: Option<PathBuf>, on_done: F)
     where
         F: 'static + FnOnce(Result<ImportedGltfModel>),

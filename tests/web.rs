@@ -7,7 +7,7 @@ use gltf::Gltf;
 use js_sys::{Function, Object};
 use std::path::PathBuf;
 use three_d::Loader;
-use three_d_gltf_import::GltfImporter;
+use three_d_gltf_import::import::GltfImporter;
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
 use wasm_bindgen_test::*;
