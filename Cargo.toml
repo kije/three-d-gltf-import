@@ -1,13 +1,13 @@
 [package]
 name = "three-d-gltf-import"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Kim Jeker <git@kije.ch>"]
 edition = "2018"
 license = "MIT"
 license-file = "LICENSE"
 description = "glTF 2.0 loader for three-d"
 readme = "README.MD"
-keywords = ["glTF", "3D", "asset", "model", "three-d"]
+keywords = ["glTF", "3D", "webassembly", "model", "three-d"]
 include = ["**/*.rs", "Cargo.toml"]
 repository = "https://github.com/kije/three-d-gltf-import"
 [dependencies]
