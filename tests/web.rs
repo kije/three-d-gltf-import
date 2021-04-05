@@ -7,12 +7,42 @@ use gltf::Gltf;
 use js_sys::{Function, Object};
 use std::path::PathBuf;
 use three_d::Loader;
-use three_d_gltf_import::import::GltfImporter;
+use three_d_gltf_import::import::{GltfImporter, ImportedGltfModel};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::JsFuture;
 use wasm_bindgen_test::*;
 
 wasm_bindgen_test_configure!(run_in_browser);
+
+fn assert_imported_doc(
+    imported: &ImportedGltfModel,
+    expected_buffers: usize,
+    expected_images: usize,
+    resolve: Function,
+    reject: Function,
+) {
+    if imported.buffers().len() != expected_buffers {
+        reject.call1(
+            &JsValue::from_str(&format!(
+                "Expected number of buffers to be {:?}, found {:?}",
+                expected_buffers,
+                imported.buffers().len(),
+            )),
+            &Object::new(),
+        );
+    } else if imported.images().len() != expected_images {
+        reject.call1(
+            &JsValue::from_str(&format!(
+                "Expected number of images to be {:?}, found {:?}",
+                expected_images,
+                imported.images().len(),
+            )),
+            &Object::new(),
+        );
+    } else {
+        resolve.call0(&Object::new());
+    }
+}
 
 #[wasm_bindgen_test]
 async fn test_import_triangle_model() {
@@ -25,27 +55,7 @@ async fn test_import_triangle_model() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 0 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            0
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 0, resolve, reject);
             })
         })
     });
@@ -67,27 +77,7 @@ async fn test_import_triangle_model_with_embedded_data() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 0 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            0
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 0, resolve, reject);
             })
         })
     });
@@ -106,27 +96,7 @@ async fn test_import_cube_model() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 2 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            2
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 2, resolve, reject);
             })
         })
     });
@@ -148,27 +118,7 @@ async fn test_import_simple_meshes_model() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 0 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            0
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 0, resolve, reject);
             })
         })
     });
@@ -190,27 +140,7 @@ async fn test_import_simple_meshes_model_with_embedded_data() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 0 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            0
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 0, resolve, reject);
             })
         })
     });
@@ -229,27 +159,7 @@ async fn test_import_fox_model() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 1, resolve, reject);
             })
         })
     });
@@ -271,27 +181,7 @@ async fn test_import_fox_model_with_embedded_data() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 1, resolve, reject);
             })
         })
     });
@@ -310,27 +200,7 @@ async fn test_import_fox_model_binary() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 1, resolve, reject);
             })
         })
     });
@@ -349,27 +219,7 @@ async fn test_import_toy_car_model() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 8 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            8
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 8, resolve, reject);
             })
         })
     });
@@ -391,27 +241,7 @@ async fn test_import_toy_car_model_binary() {
             let gltf = Gltf::from_slice(b).unwrap();
             GltfImporter::import(gltf, Some(base), move |imported| {
                 let result = imported.unwrap();
-                if result.buffers.len() != 1 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.buffers.len(),
-                            1
-                        )),
-                        &Object::new(),
-                    );
-                } else if result.images.len() != 8 {
-                    reject.call1(
-                        &JsValue::from_str(&format!(
-                            "{:?} not equals {:?}",
-                            result.images.len(),
-                            8
-                        )),
-                        &Object::new(),
-                    );
-                } else {
-                    resolve.call0(&Object::new());
-                }
+                assert_imported_doc(&result, 1, 8, resolve, reject);
             })
         })
     });
