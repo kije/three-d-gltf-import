@@ -1,6 +1,6 @@
 [package]
 name = "three-d-gltf-import"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Kim Jeker <git@kije.ch>"]
 edition = "2018"
 license = "MIT"
