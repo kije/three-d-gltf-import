@@ -11,6 +11,9 @@ use three_d::Loader;
 #[cfg(not(target_arch = "wasm32"))]
 use three_d::IOError;
 
+pub type LoadedImages = HashMap<usize, DynamicImage>;
+pub type LoadedBuffers = HashMap<usize, buffer::Data>;
+
 /// Importer for GLTF models
 ///
 /// This imported will, given a parsed GLTF document, load linked assets like images (for textures) and buffers.
@@ -24,8 +27,8 @@ use three_d::IOError;
 /// let gltf = Gltf::open(base.join("ToyCar.gltf")).unwrap();
 /// GltfImporter::import(gltf, Some(base), |imported| {
 ///     let result = imported.unwrap();
-///     assert_eq!(result.buffers.len(), 1);
-///     assert_eq!(result.images.len(), 8);
+///     assert_eq!(result.buffers().len(), 1);
+///     assert_eq!(result.images().len(), 8);
 /// })
 /// ```
 pub struct GltfImporter {}
@@ -34,21 +37,38 @@ pub struct GltfImporter {}
 #[derive(Clone, Debug)]
 pub struct ImportedGltfModel {
     /// Imported image data
+    images: LoadedImages,
+    /// Imported buffer data
+    buffers: LoadedBuffers,
+    /// The parsed GLTF document
+    document: Document,
+}
+
+impl ImportedGltfModel {
+    /// Imported image data
     ///
     /// Keys of the hashmap corresponds to the indexes from the `images` section of the GLTF document
-    pub images: HashMap<usize, gltf_image::Data>,
+    pub fn images(&self) -> &LoadedImages {
+        &self.images
+    }
+
     /// Imported buffer data
     ///
     /// Keys of the hashmap corresponds to the indexes from the `buffers` section of the GLTF document
-    pub buffers: HashMap<usize, buffer::Data>,
+    pub fn buffers(&self) -> &LoadedBuffers {
+        &self.buffers
+    }
+
     /// The parsed GLTF document
-    pub document: Document,
+    pub fn document(&self) -> &Document {
+        &self.document
+    }
 }
 
 enum ImageImport {
     Loaded {
         index: usize,
-        data: gltf_image::Data,
+        data: DynamicImage,
     },
     NeedsLoading {
         index: usize,
@@ -128,7 +148,7 @@ impl GltfImporter {
         mut blob: Option<Vec<u8>>,
         on_done: F,
     ) where
-        F: 'static + FnOnce(Result<HashMap<usize, buffer::Data>>, Document),
+        F: 'static + FnOnce(Result<LoadedBuffers>, Document),
     {
         let document_buffers = document.buffers();
         let mut imported_buffers = Vec::with_capacity(document_buffers.len());
@@ -190,7 +210,7 @@ impl GltfImporter {
             .collect();
 
         Loader::load(paths.as_slice(), move |loaded| {
-            let result: Result<HashMap<_, _>> = imported_buffers
+            let result: Result<LoadedBuffers> = imported_buffers
                 .into_iter()
                 .map(|buffer| match buffer {
                     BufferImport::NeedsLoading {
@@ -237,11 +257,10 @@ impl GltfImporter {
     fn load_image_data<F>(
         document: Document,
         base: Option<&Path>,
-        buffer_data: HashMap<usize, buffer::Data>,
+        buffer_data: LoadedBuffers,
         on_done: F,
     ) where
-        F: 'static
-            + FnOnce(Result<HashMap<usize, gltf_image::Data>>, HashMap<usize, buffer::Data>, Document),
+        F: 'static + FnOnce(Result<LoadedImages>, LoadedBuffers, Document),
     {
         let document_images = document.images();
         let mut imported_images = Vec::with_capacity(document_images.len());
@@ -251,7 +270,6 @@ impl GltfImporter {
                     match Scheme::parse(uri) {
                         Scheme::Data(media_type, base64) => ImageImport::Loaded {
                             index: image.index(),
-                            // todo type missmatch (result)
                             data: match Self::load_image_from_data_uri(
                                 media_type.or(mime_type),
                                 base64,
@@ -328,7 +346,7 @@ impl GltfImporter {
             .collect();
 
         Loader::load(paths.as_slice(), move |loaded| {
-            let result: Result<HashMap<_, _>> = imported_images
+            let result: Result<LoadedImages> = imported_images
                 .into_iter()
                 .map(|image| match image {
                     ImageImport::NeedsLoading {
@@ -382,44 +400,18 @@ impl GltfImporter {
         }
     }
 
-    fn load_image_from_data_uri(mime_type: Option<&str>, base64: &str) -> Result<gltf_image::Data> {
+    fn load_image_from_data_uri(mime_type: Option<&str>, base64: &str) -> Result<DynamicImage> {
         let encoded_image = base64::decode(&base64).map_err(Error::Base64)?;
         let encoded_format = Self::mime_type_to_image_format(&encoded_image, mime_type)?;
         let decoded_image = image::load_from_memory_with_format(&encoded_image, encoded_format)?;
-        Ok(data_from_dynamic_image(decoded_image))
+        Ok(decoded_image)
     }
 
-    fn load_image_from_buffer(buffer: &[u8], mime_type: Option<&str>) -> Result<gltf_image::Data> {
+    fn load_image_from_buffer(buffer: &[u8], mime_type: Option<&str>) -> Result<DynamicImage> {
         let encoded_format = Self::mime_type_to_image_format(buffer, mime_type)?;
         let decoded_image = image::load_from_memory_with_format(buffer, encoded_format)?;
 
-        Ok(data_from_dynamic_image(decoded_image))
-    }
-}
-
-fn data_from_dynamic_image(image: DynamicImage) -> gltf_image::Data {
-    use gltf::image::Format;
-    use image::GenericImageView;
-
-    let format = match image {
-        DynamicImage::ImageLuma8(_) => Format::R8,
-        DynamicImage::ImageLumaA8(_) => Format::R8G8,
-        DynamicImage::ImageRgb8(_) => Format::R8G8B8,
-        DynamicImage::ImageRgba8(_) => Format::R8G8B8A8,
-        DynamicImage::ImageBgr8(_) => Format::B8G8R8,
-        DynamicImage::ImageBgra8(_) => Format::B8G8R8A8,
-        DynamicImage::ImageLuma16(_) => Format::R16,
-        DynamicImage::ImageLumaA16(_) => Format::R16G16,
-        DynamicImage::ImageRgb16(_) => Format::R16G16B16,
-        DynamicImage::ImageRgba16(_) => Format::R16G16B16A16,
-    };
-    let (width, height) = image.dimensions();
-    let pixels = image.to_bytes();
-    gltf_image::Data {
-        format,
-        width,
-        height,
-        pixels,
+        Ok(decoded_image)
     }
 }
 
@@ -493,8 +485,8 @@ mod tests {
         let gltf = Gltf::open(base.join("Triangle.gltf")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 0);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 0);
         })
     }
 
@@ -508,8 +500,8 @@ mod tests {
         let gltf = Gltf::open(base.join("Triangle.gltf")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 0);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 0);
         })
     }
 
@@ -523,8 +515,8 @@ mod tests {
         let gltf = Gltf::open(base.join("Cube.gltf")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 2);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 2);
         })
     }
 
@@ -538,8 +530,8 @@ mod tests {
         let gltf = Gltf::open(base.join("SimpleMeshes.gltf")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 0);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 0);
         })
     }
 
@@ -553,8 +545,8 @@ mod tests {
         let gltf = Gltf::open(base.join("SimpleMeshes.gltf")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 0);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 0);
         })
     }
 
@@ -568,8 +560,8 @@ mod tests {
         let gltf = Gltf::open(base.join("Fox.gltf")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 1);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 1);
         })
     }
 
@@ -583,8 +575,8 @@ mod tests {
         let gltf = Gltf::open(base.join("Fox.gltf")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 1);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 1);
         })
     }
 
@@ -598,8 +590,8 @@ mod tests {
         let gltf = Gltf::open(base.join("Fox.glb")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 1);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 1);
         })
     }
 
@@ -613,8 +605,8 @@ mod tests {
         let gltf = Gltf::open(base.join("ToyCar.gltf")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 8);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 8);
         })
     }
 
@@ -628,8 +620,8 @@ mod tests {
         let gltf = Gltf::open(base.join("ToyCar.glb")).unwrap();
         GltfImporter::import(gltf, Some(base), |imported| {
             let result = imported.unwrap();
-            assert_eq!(result.buffers.len(), 1);
-            assert_eq!(result.images.len(), 8);
+            assert_eq!(result.buffers().len(), 1);
+            assert_eq!(result.images().len(), 8);
         })
     }
 }
